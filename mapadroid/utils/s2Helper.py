@@ -1,4 +1,5 @@
 import math
+import random
 import multiprocessing
 from typing import List
 
@@ -42,6 +43,14 @@ class S2Helper:
         for value in range(0, 4):
             vertex = s2sphere.LatLng.from_point(cell.get_vertex(value))
             coords.append([vertex.lat().degrees, vertex.lng().degrees])
+        return coords
+
+    @staticmethod
+    def random_coords_in_cell(geofence_helper: GeofenceHelper, k=2):
+        min_lat, min_lon, max_lat, max_lon = geofence_helper.get_polygon_from_fence()
+        coords = []
+        for value in range(0, k):
+            coords.append([random.uniform(min_lat, max_lat), random.uniform(min_lon, max_lon)])
         return coords
 
     @staticmethod

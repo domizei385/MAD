@@ -437,15 +437,19 @@ class DbWrapper:
                         geofence_helper = GeofenceHelper(geohelper_data, None)
                         spawns = self.retrieve_next_spawns(geofence_helper)
 
+                        center_lat, center_lng = S2Helper.middle_of_cell(cell_id)
+                        to_be_encountered.append((i, Location(center_lat, center_lng), encounter_id))
+                        i += 1
                         if len(spawns) == 0:
                             logger.info("Trying to encounter nearby_cell spawn with no known spawnpoints in cell. Jumping to 3 random cell locations")
-                            for spawn_location in S2Helper.random_coords_in_cell(geofence_helper):
-                                to_be_encountered.append((i, spawn_location, encounter_id))
+                            for lat, lng in S2Helper.random_coords_in_cell(geofence_helper, k=2):
+                                to_be_encountered.append((i, Location(lat, lng), encounter_id))
                                 i += 1
                         else:
-                            for _, spawn_location in spawns:
+                            for _, spawn_location in random.sample(spawns, k=min(2, len(spawns))):
                                 to_be_encountered.append((i, spawn_location, encounter_id))
                                 i += 1
+                                break
                     else:
                         to_be_encountered.append((i, location, encounter_id))
             i += 1
