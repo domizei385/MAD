@@ -42,7 +42,8 @@ class RouteManagerIV(RouteManagerBase):
                                                                   min_time_left_seconds=self.settings.get(
                                                                       "min_time_left_seconds", None),
                                                                   eligible_mon_ids=self.settings.get(
-                                                                      "mon_ids_iv_raw", None))
+                                                                      "mon_ids_iv_raw", None),
+                                                                  include_nearby_cells=self.settings.get("include_nearby_cells", False))
         # extract the encounterIDs and set them in the routeManager...
         new_list = set()
         for prio in latest_priorities:
