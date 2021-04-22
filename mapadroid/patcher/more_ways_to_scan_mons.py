@@ -57,3 +57,14 @@ class Patch(PatchBase):
         except Exception as e:
             self._logger.exception("Unexpected error: {}", e)
             self.issues = True
+
+        alter_iv_mitm = """
+            ALTER TABLE `settings_area_iv_mitm`
+            ADD COLUMN `include_nearby_cells` tinyint(1) DEFAULT NULL;
+        """
+        try:
+            if not self._schema_updater.check_column_exists("settings_area_iv_mitm", "include_nearby_cells"):
+                self._db.execute(alter_iv_mitm, commit=True, raise_exec=True)
+        except Exception as e:
+            self._logger.exception("Unexpected error: {}", e)
+            self.issues = True
