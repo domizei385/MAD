@@ -56,7 +56,9 @@ class S2Helper:
             i += 1
             lat, lng = random.uniform(min_lat, max_lat), random.uniform(min_lon, max_lon)
             for coord in result:
-                if get_distance_of_two_points_in_meters(lat, lng, coord[0], coord[1]) > min_distance:
+                dist = get_distance_of_two_points_in_meters(lat, lng, coord[0], coord[1])
+                logger.info("Distance {} ({} {} <-> {} {}", dist, lat, lng, coord[0], coord[1])
+                if dist > min_distance:
                     continue
             result.append([lat, lng])
         return result

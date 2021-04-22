@@ -438,7 +438,7 @@ class DbWrapper:
                         spawns = self.retrieve_next_spawns(geofence_helper)
 
                         if len(spawns) < 3:
-                            logger.debug("Trying to encounter nearby_cell spawn with low # of known spawnpoints in cell. Jumping to some random cell locations.")
+                            logger.info("Trying to encounter nearby_cell spawn with low # of known spawnpoints in cell. Jumping to some random cell locations.")
                             spawn_locations = []
                             if len(spawns) > 0:
                                 spawn_locations = random.sample(spawns, k=1)
