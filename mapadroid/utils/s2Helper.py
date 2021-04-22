@@ -46,7 +46,7 @@ class S2Helper:
         return coords
 
     @staticmethod
-    def random_coords_in_cell(geofence_helper: GeofenceHelper, spawn_locations: List[Location]=[], min_distance=90, k=2):
+    def random_coords_in_cell(geofence_helper: GeofenceHelper, spawn_locations: List[Location]=[], min_distance=130, k=2):
         result = []
         for _, location in spawn_locations:
             result.append([location.lat, location.lng])
