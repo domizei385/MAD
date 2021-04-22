@@ -46,12 +46,20 @@ class S2Helper:
         return coords
 
     @staticmethod
-    def random_coords_in_cell(geofence_helper: GeofenceHelper, k=2):
+    def random_coords_in_cell(geofence_helper: GeofenceHelper, spawn_locations: List[Location]=[], min_distance=90, k=2):
+        result = []
+        for _, location in spawn_locations:
+            result.append([location.lat, location.lng])
         min_lat, min_lon, max_lat, max_lon = geofence_helper.get_polygon_from_fence()
-        coords = []
-        for value in range(0, k):
-            coords.append([random.uniform(min_lat, max_lat), random.uniform(min_lon, max_lon)])
-        return coords
+        i = 0
+        while len(result) < (k + len(spawn_locations)) and i < 50:
+            i += 1
+            lat, lng = random.uniform(min_lat, max_lat), random.uniform(min_lon, max_lon)
+            for coord in result:
+                if get_distance_of_two_points_in_meters(lat, lng, coord[0], coord[1]) > min_distance:
+                    continue
+            result.append([lat, lng])
+        return result
 
     @staticmethod
     def get_position_from_cell(cell_id):
