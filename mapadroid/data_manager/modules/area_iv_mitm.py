@@ -148,6 +148,15 @@ class AreaIVMITM(Area):
                                    "Pokemon species to reach a near 100% IV-rate. This will slow down route progress!",
                     "expected": bool
                 }
+            },
+            "include_nearby_cells": {
+                "settings": {
+                    "type": "option",
+                    "require": False,
+                    "values": [False, True],
+                    "description": "If turned on, the IV worker will include encounters in nearby Level 15 S2 cells (which has currently a very low benefit).",
+                    "expected": bool
+                }
             }
         }
     }

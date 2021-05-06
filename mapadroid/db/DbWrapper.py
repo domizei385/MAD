@@ -378,7 +378,8 @@ class DbWrapper:
         return {'pokemon': res, 'total': total}
 
     def get_to_be_encountered(self, geofence_helper, min_time_left_seconds,
-                              eligible_mon_ids: Optional[List[int]]):
+                              eligible_mon_ids: Optional[List[int]],
+                              include_nearby_cells: bool):
         if min_time_left_seconds is None or eligible_mon_ids is None:
             logger.warning(
                 "DbWrapper::get_to_be_encountered: Not returning any encounters since no time left or "
@@ -391,9 +392,10 @@ class DbWrapper:
             "TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), disappear_time) AS expire, seen_type, cell_id "
             "FROM pokemon "
             "WHERE individual_attack IS NULL AND individual_defense IS NULL AND individual_stamina IS NULL "
-            "AND encounter_id != 0 AND seen_type != 'nearby_cell' "
+            "AND encounter_id != 0 "
             "and (disappear_time BETWEEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL %s SECOND) "
             "and DATE_ADD(UTC_TIMESTAMP(), INTERVAL 60 MINUTE))"
+            + ("AND seen_type != 'nearby_cell' " if not include_nearby_cells else " ") +
             "ORDER BY expire ASC"
         )
 
@@ -432,12 +434,14 @@ class DbWrapper:
                                 str(lat) + "," + str(lon) for lat, lon in cell_coords
                             ]
                         }
-                        spawns = self.retrieve_next_spawns(
-                            GeofenceHelper(geohelper_data, None)
-                        )
+                        geofence_helper = GeofenceHelper(geohelper_data, None)
+                        spawns = self.retrieve_next_spawns(geofence_helper)
 
                         if len(spawns) == 0:
-                            to_be_encountered.append((i, location, encounter_id))
+                            logger.info("Trying to encounter nearby_cell spawn with no known spawnpoints in cell. Jumping to 3 random cell locations")
+                            for spawn_location in S2Helper.random_coords_in_cell(geofence_helper):
+                                to_be_encountered.append((i, spawn_location, encounter_id))
+                                i += 1
                         else:
                             for _, spawn_location in spawns:
                                 to_be_encountered.append((i, spawn_location, encounter_id))
