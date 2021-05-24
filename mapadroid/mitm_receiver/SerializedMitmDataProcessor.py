@@ -95,15 +95,15 @@ class SerializedMitmDataProcessor(Process):
                 self.__mitm_mapper.submit_gmo_for_location(origin, data["payload"])
                 gmo_loc_time = self.get_time_ms() - gmo_loc_start
 
-                if self.__application_args.no_lure_mons:
-                    lurenoiv_time = 0
-                    lure_wild = []
-                else:
+                if self.__application_args.scan_lured_mons:
                     lurenoiv_start = self.get_time_ms()
                     lure_wild = self.__db_submit.mon_lure_noiv(origin, data["payload"])
                     lurenoiv_time = self.get_time_ms() - lurenoiv_start
+                else:
+                    lurenoiv_time = 0
+                    lure_wild = []
 
-                if self.__application_args.do_nearby_scans:
+                if self.__application_args.scan_nearby_mons:
                     nearby_mons_time_start = self.get_time_ms()
                     cell_encounters, stop_encounters = self.__db_submit.nearby_mons(
                         origin, received_timestamp, data["payload"], self.__mitm_mapper)
@@ -147,7 +147,7 @@ class SerializedMitmDataProcessor(Process):
             elif data_type == 145:
                 # lure mons with iv
                 playerlevel = self.__mitm_mapper.get_playerlevel(origin)
-                if (not self.__application_args.no_lure_mons) and (playerlevel >= 30):
+                if self.__application_args.scan_lured_mons and (playerlevel >= 30):
                     origin_logger.debug("Processing lure encounter received at {}", processed_timestamp)
 
                     lure_encounter = self.__db_submit.mon_lure_iv(
