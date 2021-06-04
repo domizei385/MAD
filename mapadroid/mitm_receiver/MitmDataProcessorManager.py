@@ -48,17 +48,24 @@ class MitmDataProcessorManager:
             if item_count > 50:
                 logger.warning("MITM data processing workers are falling behind! Queue length: {}", item_count)
                 if not self._queue_has_backlog:
+                    logger.warning("Notifying processors about backlog")
                     self._queue_has_backlog = True
-                    self._notify_processors(True)
+                    self._notify_processors(0.01)
+                if item_count > 6000:
+                    self._notify_processors(0.5)
+                elif item_count > 1000:
+                    self._notify_processors(0.01 + (item_count - 1000) / 10000)
             elif self._queue_has_backlog:
+                logger.warning("Notifying processors that there is no longer a backlog")
                 self._queue_has_backlog = False
-                self._notify_processors(False)
+                self._notify_processors(0.0)
 
             time.sleep(3)
 
-    def _notify_processors(self, has_backlog):
+    def _notify_processors(self, queue_drain: float):
+        logger.warning("Notifying processors to drain from queue")
         for worker_thread in self._worker_threads:
-            worker_thread.set_backlog_status(has_backlog)
+            worker_thread.set_queue_drain(queue_drain)
 
     def launch_processors(self):
         for i in range(self._args.mitmreceiver_data_workers):

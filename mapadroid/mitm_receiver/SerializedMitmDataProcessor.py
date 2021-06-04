@@ -1,3 +1,4 @@
+import random
 import time
 from datetime import datetime
 from multiprocessing import Process, Queue
@@ -19,10 +20,10 @@ class SerializedMitmDataProcessor(Process):
         self.__application_args = application_args
         self.__mitm_mapper: MitmMapper = mitm_mapper
         self.__name = name
-        self.__hasQueueBacklog = False
+        self.__queue_drain: float = 0.0
 
-    def set_backlog_status(self, has_backlog):
-        self.__hasQueueBacklog = has_backlog
+    def set_queue_drain(self, queue_drain: float):
+        self.__queue_drain = queue_drain
 
     def run(self):
         logger.info("Starting serialized MITM data processor")
@@ -33,7 +34,10 @@ class SerializedMitmDataProcessor(Process):
                 if item is None:
                     logger.info("Received signal to stop MITM data processor")
                     break
-                self.process_data(item[0], item[1], item[2])
+                if self.__queue_drain > random.random():
+                    logger.debug("MITM data processor draining item, instead of processing")
+                else:
+                    self.process_data(item[0], item[1], item[2])
                 self.__queue.task_done()
                 end_time = self.get_time_ms() - start_time
                 logger.debug("MITM data processor {} finished queue item in {}ms", self.__name, end_time)
@@ -107,7 +111,7 @@ class SerializedMitmDataProcessor(Process):
                     lurenoiv_time = 0
                     lure_wild = []
 
-                if not self.__hasQueueBacklog:
+                if self.__queue_drain == 0.0:
                     if self.__application_args.scan_nearby_mons:
                         nearby_mons_time_start = self.get_time_ms()
                         cell_encounters, stop_encounters = self.__db_submit.nearby_mons(
