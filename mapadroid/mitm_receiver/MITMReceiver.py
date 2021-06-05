@@ -1,6 +1,7 @@
 import gzip
 import io
 import json
+import random
 import socket
 import sys
 import time
@@ -221,6 +222,7 @@ class MITMReceiver(Process):
                               methods_passed=['GET'])
 
         self.__mitmreceiver_startup_time: float = time.time()
+        self.__queue_drain: float = 0.0
 
     def shutdown(self):
         logger.info("MITMReceiver stop called...")
@@ -284,12 +286,18 @@ class MITMReceiver(Process):
         self.__mitm_mapper.update_latest(origin, timestamp_received_raw=timestamp,
                                          timestamp_received_receiver=time.time(), key=proto_type, values_dict=data,
                                          location=location_of_data)
+        if 0.0 < self.__queue_drain < random.random():
+            origin_logger.debug2("Skipping addition to data_queue, due to queue_drain")
+            return
         origin_logger.debug2("Placing data received to data_queue")
         self._add_to_queue((timestamp, data, origin))
 
     def _add_to_queue(self, data):
         if self._data_queue:
             self._data_queue.put(data)
+
+    def set_queue_drain(self, queue_drain: float):
+        self.__queue_drain = queue_drain
 
     def get_latest(self, origin, data):
         injected_settings = self.__mitm_mapper.request_latest(

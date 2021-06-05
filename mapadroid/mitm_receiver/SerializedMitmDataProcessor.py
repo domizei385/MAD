@@ -1,4 +1,3 @@
-import random
 import time
 from datetime import datetime
 from multiprocessing import Process, Queue
@@ -34,10 +33,7 @@ class SerializedMitmDataProcessor(Process):
                 if item is None:
                     logger.info("Received signal to stop MITM data processor")
                     break
-                if self.__queue_drain > random.random():
-                    logger.debug("MITM data processor draining item, instead of processing")
-                else:
-                    self.process_data(item[0], item[1], item[2])
+                self.process_data(item[0], item[1], item[2])
                 self.__queue.task_done()
                 end_time = self.get_time_ms() - start_time
                 logger.debug("MITM data processor {} finished queue item in {}ms", self.__name, end_time)
