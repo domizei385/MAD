@@ -287,7 +287,7 @@ class MITMReceiver(Process):
                                          timestamp_received_receiver=time.time(), key=proto_type, values_dict=data,
                                          location=location_of_data)
         if 0.0 < self.__queue_drain < random.random():
-            origin_logger.debug2("Skipping addition to data_queue, due to queue_drain")
+            origin_logger.debug("Skipping addition to data_queue, due to queue_drain")
             return
         origin_logger.debug2("Placing data received to data_queue")
         self._add_to_queue((timestamp, data, origin))
