@@ -243,6 +243,7 @@ if __name__ == "__main__":
                                          mitm_data_processor_manager.get_queue(),
                                          enable_configmode=args.config_mode)
     mitm_receiver_process.start()
+    mitm_data_processor_manager.set_mitm_receiver(mitm_receiver_process)
 
     logger.info('Starting websocket server on port {}'.format(str(args.ws_port)))
     ws_server = WebsocketServer(args=args,
