@@ -21,6 +21,10 @@ class SerializedMitmDataProcessor(Process):
         self.__mitm_mapper: MitmMapper = mitm_mapper
         self._quest_gen: QuestGen = quest_gen
         self.__name = name
+        self.__queue_drain: float = 0.0
+
+    def set_queue_drain(self, queue_drain: float):
+        self.__queue_drain = queue_drain
 
     def run(self):
         logger.info("Starting serialized MITM data processor")
@@ -105,21 +109,25 @@ class SerializedMitmDataProcessor(Process):
                     lurenoiv_time = 0
                     lure_wild = []
 
-                if self.__application_args.scan_nearby_mons:
-                    nearby_mons_time_start = self.get_time_ms()
-                    cell_encounters, stop_encounters = self.__db_submit.nearby_mons(
-                        origin, received_timestamp, data["payload"], self.__mitm_mapper)
-                    nearby_mons_time = self.get_time_ms() - nearby_mons_time_start
-                else:
-                    cell_encounters = []
-                    stop_encounters = []
-                    nearby_mons_time = 0
+                if self.__queue_drain == 0.0:
+                    if self.__application_args.scan_nearby_mons:
+                        nearby_mons_time_start = self.get_time_ms()
+                        cell_encounters, stop_encounters = self.__db_submit.nearby_mons(
+                            origin, received_timestamp, data["payload"], self.__mitm_mapper)
+                        nearby_mons_time = self.get_time_ms() - nearby_mons_time_start
+                    else:
+                        cell_encounters = []
+                        stop_encounters = []
+                        nearby_mons_time = 0
 
-                if self.__application_args.game_stats:
-                    self.__db_submit.update_seen_type_stats(
-                        wild=wild_encounters, lure_wild=lure_wild,
-                        nearby_cell=cell_encounters, nearby_stop=stop_encounters
-                    )
+                    if self.__application_args.game_stats:
+                        self.__db_submit.update_seen_type_stats(
+                            wild=wild_encounters, lure_wild=lure_wild,
+                            nearby_cell=cell_encounters, nearby_stop=stop_encounters
+                        )
+                else:
+                    origin_logger.debug("Dynamically skipping processing of nearby mons")
+                    nearby_mons_time = 0
 
                 full_time = self.get_time_ms() - start_time
 
@@ -136,7 +144,7 @@ class SerializedMitmDataProcessor(Process):
                     encounter = self.__db_submit.mon_iv(
                         origin, received_timestamp, data["payload"], self.__mitm_mapper)
 
-                    if self.__application_args.game_stats:
+                    if self.__application_args.game_stats and self.__queue_drain == 0.0:
                         self.__db_submit.update_seen_type_stats(
                             encounter=encounter
                         )
@@ -155,7 +163,7 @@ class SerializedMitmDataProcessor(Process):
                     lure_encounter = self.__db_submit.mon_lure_iv(
                         origin, received_timestamp, data["payload"])
 
-                    if self.__application_args.game_stats:
+                    if self.__application_args.game_stats and self.__queue_drain == 0.0:
                         self.__db_submit.update_seen_type_stats(
                             lure_encounter=lure_encounter
                         )
