@@ -47,19 +47,16 @@ class MitmDataProcessorManager:
     def _queue_size_check(self):
         while not self._stop_queue_check_thread:
             item_count = self.get_queue_size()
-            if item_count > 50:
+            if item_count > 100:
                 logger.warning("MITM data processing workers are falling behind! Queue length: {}", item_count)
                 if not self._queue_has_backlog:
                     logger.warning("Notifying processors about backlog")
                     self._queue_has_backlog = True
                     self._notify_drain(0.01)
-                # if item_count > 10000:
-                #     logger.warning("MITM data processing queue has huge delay. Attempting to restart processors.")
-                #     self._restart_processors()
-                if item_count > 6000:
+                if item_count > 5000:
                     self._notify_drain(0.5)
-                elif item_count > 1000:
-                    self._notify_drain((item_count - 1000) / 10000)
+                elif item_count > 500:
+                    self._notify_drain(item_count * 0.0001)
             elif self._queue_has_backlog:
                 logger.warning("Notifying processors that there is no longer a backlog")
                 self._queue_has_backlog = False
@@ -85,17 +82,6 @@ class MitmDataProcessorManager:
 
             data_processor.start()
             self._worker_threads.append(data_processor)
-
-    # def _restart_processors(self):
-    #     if self._last_restart != 0 and self._last_restart + 900 < time.time():
-    #         self._last_restart = time.time()
-    #         logger.info("Stopping {} MITM data processors for restart", len(self._worker_threads))
-    #         for worker_thread in self._worker_threads:
-    #             worker_thread.terminate()
-    #             worker_thread.join()
-    #         self._worker_threads.clear()
-    #         logger.info("Stopped MITM data processors. Restarting...")
-    #         self.launch_processors()
 
     def shutdown(self):
         self._stop_queue_check_thread = True
