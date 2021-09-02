@@ -1,18 +1,19 @@
 import asyncio
 import functools
-import math
 import os
-import time
 from abc import abstractmethod
 from enum import Enum
 from threading import Event, Lock, Thread, current_thread
 from typing import List, Optional
 
+import math
+import time
+
 from mapadroid.db.DbWrapper import DbWrapper
 from mapadroid.mitm_receiver.MitmMapper import MitmMapper
 from mapadroid.ocr.pogoWindows import PogoWindows
-from mapadroid.ocr.screen_type import ScreenType
 from mapadroid.ocr.screenPath import WordToScreenMatching
+from mapadroid.ocr.screen_type import ScreenType
 from mapadroid.utils import MappingManager
 from mapadroid.utils.collections import Location
 from mapadroid.utils.logging import LoggerEnums, get_logger
@@ -752,6 +753,14 @@ class WorkerBase(AbstractWorker):
             self.logger.info("Turning screen on")
             self._communicator.turn_screen_on()
             time.sleep(self.get_devicesettings_value("post_turn_screen_on_delay", 7))
+
+        if self.get_devicesettings_value('logintype', 'google') == 'ptc':
+            if self._applicationArgs.enable_login_tracking:
+                while not self._WordToScreenMatching.track_ptc_login(mode="start"):
+                    self.logger.debug("start_pogo: No permission for PTC login. Waiting for 4 minutes...")
+                    time.sleep(240)
+                    self._communicator.passthrough("true")
+                self.logger.success("start_pogo: Received permission for (potential) PTC login")
 
         cur_time = time.time()
         start_result = False

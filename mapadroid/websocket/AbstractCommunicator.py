@@ -175,3 +175,12 @@ class AbstractCommunicator(ABC):
         Returns:
 
         """
+
+    @abstractmethod
+    def get_external_ip(self) -> str:
+        pass
+
+
+    @abstractmethod
+    def get_ptc_status(self) -> Optional[int]:
+        pass

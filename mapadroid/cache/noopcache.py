@@ -5,5 +5,8 @@ class NoopCache:
     def get(self, key):
         pass
 
+    def scan_iter(self, match) -> iter:
+        return iter(list())
+
     def exists(self, key):
         return False

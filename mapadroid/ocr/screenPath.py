@@ -1,11 +1,11 @@
 import os
 import re
-import time
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from typing import List, Optional, Tuple
 
 import numpy as np
+import time
 
 from mapadroid.ocr.screen_type import ScreenType
 from mapadroid.utils import MappingManager
@@ -23,11 +23,11 @@ class LoginType(Enum):
 
 
 class WordToScreenMatching(object):
-    def __init__(self, communicator, pogo_win_manager, origin, resocalc, mapping_mananger: MappingManager, args):
+    def __init__(self, communicator, pogo_win_manager, origin, resocalc, mapping_manager: MappingManager, args):
         self.origin = origin
         self._logger = get_origin_logger(logger, origin=origin)
         self._applicationArgs = args
-        self._mapping_manager = mapping_mananger
+        self._mapping_manager = mapping_manager
         self._ratio: float = 0.0
 
         self._logintype: LoginType = LoginType.UNKNOWN
@@ -173,17 +173,30 @@ class WordToScreenMatching(object):
         n_boxes = len(global_dict['text'])
         self._logger.debug("Selecting login with: {}", global_dict)
         for i in range(n_boxes):
+            can_click = False
             if 'Facebook' in (global_dict['text'][i]):
                 temp_dict['Facebook'] = global_dict['top'][i] / diff
+                can_click = True
             if 'CLUB' in (global_dict['text'][i]):
                 temp_dict['CLUB'] = global_dict['top'][i] / diff
+                can_click = True
             # french ...
             if 'DRESSEURS' in (global_dict['text'][i]):
                 temp_dict['CLUB'] = global_dict['top'][i] / diff
+                can_click = True
             if 'Google' in (global_dict['text'][i]):
                 temp_dict['Google'] = global_dict['top'][i] / diff
+                can_click = True
+
+            if not can_click:
+                continue
 
             if self.get_devicesettings_value('logintype', 'google') == 'ptc':
+                while self._applicationArgs.enable_login_tracking and not self.track_ptc_login():
+                    self._logger.debug("No permission for PTC login. Waiting for 4 minutes...")
+                    time.sleep(240)
+                    self._communicator.passthrough("true")
+
                 self._nextscreen = ScreenType.PTC
                 if 'CLUB' in (global_dict['text'][i]):
                     self._logger.info("ScreenType.LOGINSELECT (c) using PTC (logintype in Device Settings)")
@@ -669,3 +682,27 @@ class WordToScreenMatching(object):
         else:
             returntype, global_dict, self._width, self._height, diff = result
             return returntype, global_dict, diff
+
+    def track_ptc_login(self, mode="login"):
+        """
+        Checks whether a PTC login is currently permissible. If so, a login attempt will be tracked.
+        :return: True, if PTC login can be executed. False, otherwise.
+        """
+        if mode not in ["login", "start"]:
+            mode = "login"
+        self._logger.debug(f"Checking for PTC login permission (mode {mode}")
+        ip = self._communicator.get_external_ip()
+        if not ip:
+            self._logger.warning("Unable to get IP from device. Deny PTC login request")
+            return False
+
+        code = self._communicator.get_ptc_status() or 500
+        if code == 200:
+            self._logger.debug(f"OK - PTC returned {code} on {ip}")
+            return self._mapping_manager.track_login_attempt(ip, self.origin)
+        elif code == 403 and mode == "start":
+            self._logger.warning(f"PTC ban is active ({code}) on {ip} - still allow trying to start app")
+            return self._mapping_manager.track_login_attempt(ip, self.origin)
+        else:
+            self._logger.debug(f"PTC login server returned {code} on {ip} - do not log in!")
+            return False

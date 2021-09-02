@@ -168,3 +168,10 @@
 #cache_host:           # Redis cache host (Default: localhost)
 #cache_port:           # Redis cache port (Default: 6379)
 #cache_database:       # Redis database. Use different numbers (0-15) if you are running multiple instances.
+
+#enable_login_tracking    # Enable login tracking (backed by Redis) to prevent ips bans
+#login_tracking_host      # Redis cache host (Default: localhost)
+#login_tracking_port      # Redis cache port (Default: 6379)
+#login_tracking_database  # Redis database. Use different numbers (0-15) if you are running multiple instances.
+#login_tracking_limit     # Max number of login attempts during 'login_tracking_timeout'.
+#login_tracking_timeout   # Duration in seconds during which a login attempt is counting towards 'login_tracking_limit'.

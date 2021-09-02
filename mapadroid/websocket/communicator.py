@@ -1,3 +1,4 @@
+from ipaddress import IPv4Address, ip_address
 from threading import Lock
 from typing import Optional
 
@@ -96,6 +97,34 @@ class Communicator(AbstractCommunicator):
 
     def magisk_on(self) -> None:
         self.passthrough("su -c magiskhide --enable")
+
+    def get_external_ip(self) -> Optional[str]:
+        try:
+            res = self.passthrough("echo \"$(curl -k -s https://ifconfig.me)\"")
+        except Exception as e:
+            self.logger.error(f"Failed getting external IP address from device: {e}")
+            return None
+
+        # parse RGC return expression
+        try:
+            res = " ".join(res.replace("[", "").replace("]", "").splitlines())
+        except Exception as e:
+            self.logger.error(f"Failed parsing external IP: {e}")
+            return None
+
+        if type(ip_address(res)) is IPv4Address:
+            return res
+        else:
+            self.logger.error(f"{res} is not a valid IPv4 address")
+            return None
+
+    def get_ptc_status(self) -> int:
+        try:
+            code = self.passthrough("curl -s -k -I https://sso.pokemon.com/sso/login -o /dev/null -w '%{http_code}'") \
+                       .replace("[", "").replace("]", "")
+            return int(code)
+        except Exception:
+            return 500
 
     def turn_screen_on(self) -> bool:
         return self.__run_and_ok("more screen on\r\n", self.__command_timeout)

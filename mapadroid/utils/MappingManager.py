@@ -1,5 +1,6 @@
 import copy
 import time
+from datetime import datetime
 from multiprocessing import Event, Lock
 from multiprocessing.managers import SyncManager
 from multiprocessing.pool import ThreadPool
@@ -7,13 +8,16 @@ from queue import Empty, Queue
 from threading import Thread
 from typing import Dict, List, Optional, Set, Tuple
 
+from redis import WatchError
+
+from mapadroid.cache import get_custom_cache
 from mapadroid.db.DbWrapper import DbWrapper
 from mapadroid.geofence.geofenceHelper import GeofenceHelper
 from mapadroid.route import RouteManagerBase, RouteManagerIV
 from mapadroid.route.RouteManagerFactory import RouteManagerFactory
 from mapadroid.utils.collections import Location
 from mapadroid.utils.language import get_mon_ids
-from mapadroid.utils.logging import LoggerEnums, get_logger
+from mapadroid.utils.logging import LoggerEnums, get_logger, get_origin_logger
 from mapadroid.utils.s2Helper import S2Helper
 from mapadroid.worker.WorkerType import WorkerType
 
@@ -95,6 +99,15 @@ class MappingManager:
         self.__shutdown_event: Event = Event()
         self.join_routes_queue = JoinQueue(self.__shutdown_event, self)
         self.__mappings_mutex: Lock = Lock()
+
+        self.__ptc_mutex: Lock = Lock()
+        self._redis = None
+        if self.__args.enable_login_tracking:
+            try:
+                self._redis = get_custom_cache(True, self.__args.login_tracking_host, self.__args.login_tracking_port,
+                                               self.__args.login_tracking_database)
+            except Exception as e:
+                logger.error(f"Failed getting custom cache for PTC redis tracking: {e} - fallback to local mode")
 
         self.update(full_lock=True)
 
@@ -668,3 +681,40 @@ class MappingManager:
         for _device_id, device in devices_raw.items():
             devices.append(device['origin'])
         return devices
+
+    def track_login_attempt(self, ip, origin, limit_seconds=None, limit_count=None):
+        if not limit_seconds:
+            limit_seconds = int(self.__args.login_tracking_timeout)
+        if not limit_count:
+            limit_count = int(self.__args.login_tracking_limit)
+        origin_logger = get_origin_logger(logger, origin=origin)
+        now = int(datetime.timestamp(datetime.now()))
+        if self._redis:
+            origin_logger.warning(f"Handle PTC login request on {ip}")
+            with self._redis.pipeline() as pipe:
+                while True:
+                    with self.__ptc_mutex:
+                        try:
+                            pipe.watch(ip)
+                            try:
+                                ct = self._redis.zcount(ip, now - limit_seconds, "+inf")
+                                # origin_logger.warning(f"got count {ct} for {ip} from redis")
+                            except Exception as e:
+                                origin_logger.warning(f"Failed getting count for {ip} from redis! Deny this attempt ... "
+                                                      f"({e})")
+                                return False
+                            if ct >= limit_count:
+                                origin_logger.warning(f"Reached threshold of {limit_count} attempts per {limit_seconds} "
+                                                      f"seconds for {ip}! Deny this login attempt")
+                                return False
+                            else:
+                                origin_logger.info(f"Got count {ct} for {ip}. Allow this login attempt, register {now}.")
+                                pipe.multi()
+                                pipe.zadd(ip, {f"{origin}:{now}": now})
+                                pipe.expire(ip, 60 * 60 * 24)
+                                pipe.execute()
+                                return True
+
+                        except WatchError as e:
+                            origin_logger.warning(f"Redis count changed for {ip}, retry ... ({e})")
+                            time.sleep(1)
