@@ -80,7 +80,7 @@ class PlayerStats(object):
             self._logger.warning('no Statsfile found')
             self.set_level(0)
             return False
-        except json.decoder.JSONDecodeError:
+        except (json.decoder.JSONDecodeError, UnicodeDecodeError):
             self._logger.error('Corrupted JSON file found.  Clearing out the file')
             os.remove(statsfile)
             self.set_level(0)
