@@ -175,7 +175,7 @@ class QuestStrategy(AbstractMitmBaseStrategy, ABC):
             # TODO: Double check account_rotation_started, it is only set to True and never to be touched
             #  again apparently
             # switch to first account if first started and rotation is activated
-            if not await self._switch_user():
+            if not await self._switch_user(reason="rotation"):
                 logger.error('Something happened during account rotation')
                 raise InternalStopWorkerException("Worker was supposed to switch accounts")
             else:
@@ -335,9 +335,9 @@ class QuestStrategy(AbstractMitmBaseStrategy, ABC):
                 await self._word_to_screen_matching.return_memory_account_count() > 1 and delay_used >= self._rotation_waittime \
                 and await self.get_devicesettings_value(MappingManagerDevicemappingKey.ACCOUNT_ROTATION,
                                                         False) and not await self._is_levelmode():
-            # Waiting time to long and more then one account - switch! (not level mode!!)
+            # Waiting time to long and more than one account - switch! (not level mode!!)
             logger.info('Can use more than 1 account - switch & no cooldown')
-            await self.switch_account()
+            await self.switch_account(reason="teleport")
             delay_used = -1
         return delay_used
 
@@ -395,7 +395,7 @@ class QuestStrategy(AbstractMitmBaseStrategy, ABC):
                 and await self._mitm_mapper.get_level(self._worker_state.origin) >= 30 \
                 and await self._is_levelmode():
             # switch if player lvl >= 30
-            await self.switch_account()
+            await self.switch_account(reason="level")
 
     async def worker_specific_setup_start(self):
         area_settings: Optional[SettingsAreaPokestop] = await self._mapping_manager.routemanager_get_settings(
@@ -473,8 +473,8 @@ class QuestStrategy(AbstractMitmBaseStrategy, ABC):
         logger.debug("checkPogoClose: done")
         return False
 
-    async def switch_account(self):
-        if not await self._switch_user():
+    async def switch_account(self, reason=None):
+        if not await self._switch_user(reason):
             logger.error('Something happened while account switching :(')
             raise InternalStopWorkerException("Failed switching accounts")
         else:
