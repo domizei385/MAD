@@ -354,7 +354,7 @@ class Worker(AbstractWorker):
                     await session.commit()
             while (not self._worker_state.stop_worker_event.is_set()
                    and check_walker_value_type(sleeptime, await self.__area_middle_of_current_fence())):
-                await asyncio.sleep(1)
+                await asyncio.sleep(30)
             logger.info('just woke up')
             if killpogo:
                 await self._scan_strategy.start_pogo()
