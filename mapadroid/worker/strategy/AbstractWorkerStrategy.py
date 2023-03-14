@@ -244,7 +244,8 @@ class AbstractWorkerStrategy(ABC):
         if start_result:
             logger.success("startPogo: Started pogo successfully...")
 
-        await self._wait_pogo_start_delay()
+            await self._wait_pogo_start_delay()
+
         await self._mapping_manager.routemanager_set_worker_sleeping(self._area_id,
                                                                      self._worker_state.origin,
                                                                      10)
