@@ -81,7 +81,7 @@ class Worker(AbstractWorker):
         if not self._scan_strategy.walker:
             return True
         reg_workers = await self._mapping_manager.routemanager_get_registered_workers(
-            self._scan_strategy.area_id)
+            self._scan_strategy.area_id, self._scan_strategy.walker.walkerarea_id)
         if self._scan_strategy.walker.max_walkers and len(reg_workers) > int(
                 self._scan_strategy.walker.max_walkers):
             return False

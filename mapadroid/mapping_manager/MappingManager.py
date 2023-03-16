@@ -121,7 +121,6 @@ class MappingManager(AbstractMappingManager):
         self._auths: Optional[Dict[str, SettingsAuth]] = None
         self.__areamons: Optional[Dict[int, List[int]]] = {}
         self._monlists: Optional[Dict[int, List[int]]] = None
-        self.__shutdown_event: Event = Event()
 
         # TODO: Move to init or call __init__ differently...
         self.__paused_devices: List[int] = []
@@ -485,9 +484,9 @@ class MappingManager(AbstractMappingManager):
 
     #        return True
 
-    async def register_worker_to_routemanager(self, routemanager_id: int, worker_name: str) -> bool:
+    async def register_worker_to_routemanager(self, routemanager_id: int, walkerarea_id: int, worker_name: str) -> bool:
         routemanager = self.__fetch_routemanager(routemanager_id)
-        return await routemanager.register_worker(worker_name) if routemanager is not None else False
+        return await routemanager.register_worker(worker_name, walkerarea_id) if routemanager is not None else False
 
     async def unregister_worker_from_routemanager(self, routemanager_id: int, worker_name: str):
         routemanager = self.__fetch_routemanager(routemanager_id)
@@ -515,9 +514,9 @@ class MappingManager(AbstractMappingManager):
         routemanager = self.__fetch_routemanager(routemanager_id)
         return routemanager.redo_stop_immediately(worker_name, lat, lon) if routemanager is not None else False
 
-    async def routemanager_get_registered_workers(self, routemanager_id: int) -> Set[str]:
+    async def routemanager_get_registered_workers(self, routemanager_id: int, walkerarea_id: int = None) -> Set[str]:
         routemanager = self.__fetch_routemanager(routemanager_id)
-        return routemanager.get_registered_workers() if routemanager is not None else set()
+        return routemanager.get_registered_workers(walkerarea_id) if routemanager is not None else set()
 
     async def routemanager_get_ids_iv(self, routemanager_id: int) -> Optional[List[int]]:
         routemanager = self.__fetch_routemanager(routemanager_id)
