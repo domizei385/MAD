@@ -638,7 +638,8 @@ class RouteManagerBase(ABC):
 
     def get_registered_workers(self, walkerarea_id: int = None) -> Set[str]:
         result = dict((k,v) for (k, v) in self._workers_registered.items() if not walkerarea_id or v == walkerarea_id)
-        logger.debug2(f"get_registered_workers for walkerarea {walkerarea_id} => {str(result.keys)}")
+        keys = ",".join(list(result.keys()))
+        logger.debug2(f"get_registered_workers for walkerarea {walkerarea_id} => {keys}")
         return set(result.keys())
 
     def get_position_type(self, origin: str) -> Optional[PositionType]:
