@@ -117,7 +117,6 @@ class MappingManager(AbstractMappingManager):
         self._auths: Optional[Dict[str, str]] = None
         self.__areamons: Optional[Dict[int, List[int]]] = {}
         self._monlists: Optional[Dict[int, List[int]]] = None
-        self.__shutdown_event: Event = Event()
 
         # TODO: Move to init or call __init__ differently...
         self.__paused_devices: List[int] = []
@@ -125,6 +124,7 @@ class MappingManager(AbstractMappingManager):
 
         self.__ptc_mutex: Lock = Lock()
         self._redis_cache: Optional[Redis] = None
+        self._update_listeners = []
 
     async def setup(self):
         self.__mappings_mutex: asyncio.Lock = asyncio.Lock()
@@ -412,9 +412,9 @@ class MappingManager(AbstractMappingManager):
 
     #        return True
 
-    async def register_worker_to_routemanager(self, routemanager_id: int, worker_name: str) -> bool:
+    async def register_worker_to_routemanager(self, routemanager_id: int, walkerarea_id: int, worker_name: str) -> bool:
         routemanager = self.__fetch_routemanager(routemanager_id)
-        return await routemanager.register_worker(worker_name) if routemanager is not None else False
+        return await routemanager.register_worker(worker_name, walkerarea_id) if routemanager is not None else False
 
     async def unregister_worker_from_routemanager(self, routemanager_id: int, worker_name: str):
         routemanager = self.__fetch_routemanager(routemanager_id)
@@ -442,9 +442,9 @@ class MappingManager(AbstractMappingManager):
         routemanager = self.__fetch_routemanager(routemanager_id)
         return routemanager.redo_stop_immediately(worker_name, lat, lon) if routemanager is not None else False
 
-    async def routemanager_get_registered_workers(self, routemanager_id: int) -> Set[str]:
+    async def routemanager_get_registered_workers(self, routemanager_id: int, walkerarea_id: int = None) -> Set[str]:
         routemanager = self.__fetch_routemanager(routemanager_id)
-        return routemanager.get_registered_workers() if routemanager is not None else set()
+        return routemanager.get_registered_workers(walkerarea_id) if routemanager is not None else set()
 
     async def routemanager_get_ids_iv(self, routemanager_id: int) -> Optional[List[int]]:
         routemanager = self.__fetch_routemanager(routemanager_id)
@@ -758,6 +758,8 @@ class MappingManager(AbstractMappingManager):
         Updates the internal mappings and routemanagers
         :return:
         """
+        for listener in self._update_listeners:
+            listener(True)
         if not full_lock:
             async with self.__db_wrapper as session, session:
                 self._monlists = await self.__get_latest_monlists(session)
@@ -800,7 +802,13 @@ class MappingManager(AbstractMappingManager):
                     self._auths = await self.__get_latest_auths(session)
                     self._geofence_helpers = await self.__get_latest_geofence_helpers(session)
 
+        for listener in self._update_listeners:
+            listener(False)
+
         logger.info("Mappings have been updated")
+
+    def add_update_listener(self, listener):
+        self._update_listeners.append(listener)
 
     async def get_all_devicenames(self) -> List[str]:
         async with self.__db_wrapper as session, session:

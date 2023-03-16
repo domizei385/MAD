@@ -78,7 +78,7 @@ class RouteManagerBase(ABC):
         self._worker_start_position: Dict[str] = {}
         self._manager_mutex: RLock = RLock()
         # we want to store the workers using the routemanager
-        self._workers_registered: Set[str] = set()
+        self._workers_registered: Dict[str, int] = {}
         self._round_started_time = None
         self._route: List[Location] = []
 
@@ -165,21 +165,21 @@ class RouteManagerBase(ABC):
     def _clear_coords(self):
         self._coords_unstructured = None
 
-    async def register_worker(self, worker_name) -> bool:
+    async def register_worker(self, worker_name, walkerarea_id: int) -> bool:
         async with self._manager_mutex:
-            if worker_name in self._workers_registered:
+            if worker_name in self._workers_registered and self._workers_registered[worker_name] == walkerarea_id:
                 logger.info("already registered")
                 return False
             else:
-                logger.info("registering to routemanager")
-                self._workers_registered.add(worker_name)
+                logger.info(f"registering {worker_name} in walkerarea {walkerarea_id} to routemanager")
+                self._workers_registered[worker_name] = walkerarea_id
                 return True
 
     async def unregister_worker(self, worker_name, remove_routepool_entry: bool = False):
         async with self._manager_mutex:
             if worker_name in self._workers_registered:
                 logger.info("unregistering from routemanager")
-                self._workers_registered.remove(worker_name)
+                self._workers_registered.pop(worker_name)
             else:
                 logger.info("failed unregistering from routemanager since subscription was previously lifted")
             if remove_routepool_entry and worker_name in self._routepool:
@@ -625,8 +625,10 @@ class RouteManagerBase(ABC):
     def get_rounds(self) -> int:
         return self._get_worker_rounds_run_through()
 
-    def get_registered_workers(self) -> Set[str]:
-        return self._workers_registered
+    def get_registered_workers(self, walkerarea_id: int = None) -> Set[str]:
+        result = dict((k,v) for (k, v) in self._workers_registered.items() if not walkerarea_id or v == walkerarea_id)
+        logger.debug2(f"get_registered_workers for walkerarea {walkerarea_id} => {str(result.keys)}")
+        return set(result.keys())
 
     def get_position_type(self, origin: str) -> Optional[PositionType]:
         routepool_entry: RoutePoolEntry = self._routepool.get(origin)

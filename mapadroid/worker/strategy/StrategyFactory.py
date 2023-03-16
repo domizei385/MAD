@@ -46,18 +46,25 @@ class WalkerConfiguration(NamedTuple):
     area_id: int
     total_areas_in_walker: int
 
-
 class StrategyFactory:
     def __init__(self, args, mapping_manager: MappingManager, mitm_mapper: AbstractMitmMapper,
                  stats_handler: AbstractStatsHandler, db_wrapper: DbWrapper, pogo_windows: PogoWindows, event):
         self.__args = args
         self.__mapping_manager: MappingManager = mapping_manager
+        mapping_manager.add_update_listener(self._set_routes_updating)
         self.__mitm_mapper: AbstractMitmMapper = mitm_mapper
         self.__stats_handler: AbstractStatsHandler = stats_handler
         self.__db_wrapper: DbWrapper = db_wrapper
         self.__pogo_windows: PogoWindows = pogo_windows
         self.__event = event
         self.__register_lock: asyncio.Lock = asyncio.Lock()
+        self.__is_updating: asyncio.Event = asyncio.Event()
+
+    def _set_routes_updating(self, status):
+        if status:
+            self.__is_updating.set()
+        else:
+            self.__is_updating.clear()
 
     async def get_strategy_using_settings(self, origin: str, enable_configmode: bool,
                                           communicator: AbstractCommunicator,
@@ -209,7 +216,7 @@ class StrategyFactory:
                     await self.__mapping_manager.routemanager_get_name(walker_configuration.area_id),
                     walker_configuration.walker_index + 1,
                     walker_configuration.total_areas_in_walker)
-        await self.__mapping_manager.register_worker_to_routemanager(walker_configuration.area_id, origin)
+        await self.__mapping_manager.register_worker_to_routemanager(walker_configuration.area_id, walker_configuration.walker_settings.walkerarea_id, origin)
         return walker_configuration
 
     async def __initalize_devicesettings(self, origin):
@@ -236,7 +243,7 @@ class StrategyFactory:
         Returns: The amount of registered workers of the area being inspected without counting the origin if present
 
         """
-        registered: Set[str] = await self.__mapping_manager.routemanager_get_registered_workers(walker_settings.area_id)
+        registered: Set[str] = await self.__mapping_manager.routemanager_get_registered_workers(walker_settings.area_id, walker_settings.walkerarea_id)
         logger.debug2("Registered workers: {}", registered)
         registered_excluding = [worker for worker in registered if worker != origin]
         return len(registered_excluding)
@@ -272,6 +279,9 @@ class StrategyFactory:
                                   await self._get_amount_of_coords_scannable(walker_settings),
                                   await self._get_worker_rounds_run_through(walker_settings)) \
                 and client_mapping.walker_area_index < len(client_mapping.walker_areas):
+            if self.__is_updating.is_set():
+                logger.info("Cancel strategy factory loop")
+                return None
             logger.info('not using area {} - Walkervalue out of range',
                         await self.__mapping_manager.routemanager_get_name(walker_settings.area_id))
             if client_mapping.walker_area_index >= len(client_mapping.walker_areas) - 1:
