@@ -93,9 +93,13 @@ class StrategyFactory:
         devicesettings: Optional[Tuple[SettingsDevice, SettingsDevicepool]] = await self.__mapping_manager \
             .get_devicesettings_of(origin)
         dev_id: int = devicesettings[0].device_id
+
         walker_routemanager_mode: WorkerType = await self.__mapping_manager.routemanager_get_mode(
-            walker_configuration.area_id
-        )
+            walker_configuration.area_id)
+        if walker_configuration.walker_settings.algo_type == 'idle':
+            logger.info(f"Routemanager Mode ({walker_routemanager_mode}) will be overridden with {WorkerType.IDLE}")
+            walker_routemanager_mode = WorkerType.IDLE
+
         if not dev_id or not walker_configuration.walker_settings or walker_routemanager_mode == WorkerType.UNDEFINED:
             logger.error("Failed to instantiate worker due to invalid settings found")
             return await self.get_strategy(worker_type=WorkerType.CONFIGMODE,
@@ -244,7 +248,7 @@ class StrategyFactory:
 
         """
         registered: Set[str] = await self.__mapping_manager.routemanager_get_registered_workers(walker_settings.area_id, walker_settings.walkerarea_id)
-        logger.debug2("Registered workers: {}", registered)
+        logger.debug2("Registered workers in {}/{}: {}", walker_settings.area_id, walker_settings.walkerarea_id, registered)
         registered_excluding = [worker for worker in registered if worker != origin]
         return len(registered_excluding)
 
