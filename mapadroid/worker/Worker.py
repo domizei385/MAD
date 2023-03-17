@@ -350,11 +350,16 @@ class Worker(AbstractWorker):
                 logger.debug("Setting device to idle for routemanager")
                 async with self._db_wrapper as session, session:
                     await TrsStatusHelper.save_idle_status(session, self._db_wrapper.get_instance_id(),
-                                                           self._worker_state.device_id, 0)
+                                                           self._worker_state.device_id, 1)
                     await session.commit()
             while (not self._worker_state.stop_worker_event.is_set()
                    and check_walker_value_type(sleeptime, await self.__area_middle_of_current_fence())):
                 await asyncio.sleep(30)
+
+            async with self._db_wrapper as session, session:
+                await TrsStatusHelper.save_idle_status(session, self._db_wrapper.get_instance_id(),
+                                                       self._worker_state.device_id, 0)
+                await session.commit()
             logger.info('just woke up')
             if stopped_pogo:
                 await self._scan_strategy.start_pogo()

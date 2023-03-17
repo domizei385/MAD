@@ -88,6 +88,11 @@ class AbstractMitmBaseStrategy(AbstractWorkerStrategy, ABC):
 
     async def pre_work_loop(self) -> None:
         await self._mitm_mapper.set_injection_status(self._worker_state.origin, False)
+        async with self._db_wrapper as session, session:
+            await TrsStatusHelper.save_idle_status(session, self._db_wrapper.get_instance_id(),
+                                                   self._worker_state.device_id, 0)
+            await session.commit()
+
         start_position = await self.get_devicesettings_value(MappingManagerDevicemappingKey.STARTCOORDS_OF_WALKER, None)
         geofence_helper_of_area = await self._mapping_manager.routemanager_get_geofence_helper(self._area_id)
         if (start_position

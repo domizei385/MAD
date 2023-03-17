@@ -19,7 +19,7 @@ class NopStrategy(AbstractWorkerStrategy):
 
         async with self._db_wrapper as session, session:
             await TrsStatusHelper.save_idle_status(session, self._db_wrapper.get_instance_id(),
-                                                   self._worker_state.device_id, 0)
+                                                   self._worker_state.device_id, 1)
             await session.commit()
 
     async def health_check(self) -> bool:
