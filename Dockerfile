@@ -5,7 +5,6 @@ FROM python:3.9-slim AS mad-core
 # Working directory for the application
 WORKDIR /usr/src/app
 
-
 # copy requirements only, to reduce image size and improve cache usage
 COPY requirements.txt /usr/src/app/
 
@@ -15,26 +14,32 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get update \
 && apt-get install -y --no-install-recommends \
 build-essential \
 default-libmysqlclient-dev \
-# OpenCV & dependencies
+# OpenCV & dependencies \
+tesseract-ocr \
 python3-opencv \
 libsm6 \
 libgl1-mesa-glx \
+supervisor \
+&& update-rc.d supervisor defaults \
 # python reqs
 && python3 -m pip install --no-cache-dir -r requirements.txt ortools redis \
-# cleanup
+# cleanup \
 && apt-get remove -y build-essential \
-&& apt-get remove -y python2.7 && rm -rf /usr/lib/python2.7 \
 && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
 && rm -rf /var/lib/apt/lists/*
 
-# tesseract
-RUN apt-get update && apt-get -y install tesseract-ocr
-
-# Copy everything to the working directory (Python files, templates, config) in one go.
-COPY . /usr/src/app/
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update \
+&& apt-get install -y --no-install-recommends nginx  \
+&& usermod -a -G root www-data \
+&& sed -i 's/user www-data/user root/g' /etc/nginx/nginx.conf
 
 # Set Entrypoint with hard-coded options
-ENTRYPOINT ["python3","start.py"]
+ADD entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Default ports for PogoDroid, RGC and MAdmin
 EXPOSE 8080 8000 5000
+
+# Copy everything to the working directory (Python files, templates, config) in one go.
+COPY . /usr/src/app/
