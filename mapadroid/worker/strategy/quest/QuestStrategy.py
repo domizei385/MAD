@@ -517,11 +517,9 @@ class QuestStrategy(AbstractMitmBaseStrategy, ABC):
                              PositionStopType.NO_FORT):
                 raise AbortStopProcessingException("No fort present or GMO empty, continuing in levelmode.")
         else:
-            if stop_type in (PositionStopType.GMO_NOT_AVAILABLE, PositionStopType.GMO_EMPTY):
-                # Restart pogo, try again, abort if it fails...
-                logger.info("GMO invalid for current position, trying to restart pogo")
-                if not await self._restart_pogo():
-                    raise AbortStopProcessingException("Failed restarting pogo after lacking data in GMOs.")
+            while stop_type in (PositionStopType.GMO_NOT_AVAILABLE, PositionStopType.GMO_EMPTY):
+                logger.info("GMO invalid for current position, waiting ...")
+
                 timestamp = int(time.time())
                 stop_type: PositionStopType = await self._current_position_has_spinnable_stop(timestamp)
 
