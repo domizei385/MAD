@@ -342,7 +342,7 @@ class Worker(AbstractWorker):
                 logger.error("Wrong Value for mode - check your settings! Killing worker")
                 return False
             sleeptime = self._scan_strategy.walker.algo_value
-            logger.info('going to sleep')
+            logger.info('idle - going to sleep')
             killpogo = False
             if check_walker_value_type(sleeptime, await self.__area_middle_of_current_fence()):
                 await self._scan_strategy.stop_pogo()

@@ -264,6 +264,8 @@ class SerializedMitmDataProcessor:
 
     async def __process_nearby_mons(self, data, received_timestamp) -> Tuple[List[int], List[int], int]:
         nearby_mons_time_start = self.get_time_ms()
+        cell_encounters = list()
+        stop_encounters = list()
         async with self.__db_wrapper as session, session:
             try:
                 cell_encounters, stop_encounters = await self.__db_submit.mons_nearby(session, received_timestamp,
