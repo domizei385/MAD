@@ -233,6 +233,8 @@ class AbstractWorkerStrategy(ABC):
                 await self._communicator.passthrough("true")
                 if c > 4:
                     logger.warning("Stopping Worker task as no PTC login slot was available")
+                    await self._communicator.stop_app("com.nianticlabs.pokemongo")
+                    await self._clear_game_data()
                     raise InternalStopWorkerException("Failed to retrieve PTC login slot")
             logger.success("start_pogo: Received permission for (potential) PTC login")
 
