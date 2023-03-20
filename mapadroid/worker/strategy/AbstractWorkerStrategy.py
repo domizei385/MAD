@@ -211,6 +211,7 @@ class AbstractWorkerStrategy(ABC):
             await asyncio.sleep(
                 await self.get_devicesettings_value(MappingManagerDevicemappingKey.POST_TURN_SCREEN_ON_DELAY, 7))
 
+        sleep_time = 0
         if await self.get_devicesettings_value(MappingManagerDevicemappingKey.LOGINTYPE, 'google') == 'ptc' and application_args.enable_login_tracking:
             logger.debug("start_pogo: Login tracking enabled")
             c=0
@@ -219,6 +220,10 @@ class AbstractWorkerStrategy(ABC):
                 # in the RGC websocket connection? Only sleep 60s and then do some nonsense ...
                 logger.warning(f"start_pogo: No permission for PTC login. Sleep for 1 minute... c = {c}")
                 c+=1
+                sleep_time+=60
+                await self._mapping_manager.routemanager_set_worker_sleeping(self._area_id,
+                                                                             self._worker_state.origin,
+                                                                             sleep_time)
                 await asyncio.sleep(60)
                 await self._communicator.passthrough("true")
                 if c > 4:
@@ -229,7 +234,6 @@ class AbstractWorkerStrategy(ABC):
         logger.info(f"logintype is {await self.get_devicesettings_value(MappingManagerDevicemappingKey.LOGINTYPE, 'default')}")
 
         await self._grant_permissions_to_pogo()
-        cur_time = time.time()
         start_result = False
         attempts = 0
         while not pogo_topmost:
@@ -248,7 +252,7 @@ class AbstractWorkerStrategy(ABC):
 
         await self._mapping_manager.routemanager_set_worker_sleeping(self._area_id,
                                                                      self._worker_state.origin,
-                                                                     10)
+                                                                     sleep_time + 10)
         return start_result
 
     async def set_devicesettings_value(self, key: MappingManagerDevicemappingKey, value: Optional[Any]):
