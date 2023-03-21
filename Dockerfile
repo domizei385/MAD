@@ -22,7 +22,7 @@ libgl1-mesa-glx \
 supervisor \
 && update-rc.d supervisor defaults \
 # python reqs
-&& python3 -m pip install --no-cache-dir -r requirements.txt ortools redis \
+&& python3 -m pip install --no-cache-dir -r requirements.txt ortools redis pure-python-adb \
 # cleanup \
 && apt-get remove -y build-essential \
 && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
