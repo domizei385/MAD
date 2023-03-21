@@ -119,7 +119,7 @@ class WebhookWorker:
                         logger.success("Successfully sent payload to webhook{}{}. Stats: {}", whchunk_text,
                                        whcount_text, await mad_json_dumps(self.__payload_type_count(payload_chunk)))
                 except Exception as e:
-                    logger.warning("Exception occured while sending webhook: {}", e)
+                    logger.warning("Exception occurred while sending webhook: {}", e)
 
                 current_pl_num += 1
             current_wh_num += 1
