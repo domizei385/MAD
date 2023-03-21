@@ -136,6 +136,7 @@ class APKStorageDatabase(AbstractAPKStorage):
                 return True
             except Exception as e:  # noqa: E722 B001
                 logger.warning("Unable to save/upload apk: {}", e, exc_info=True)
+                await session.rollback()
             return False
 
     async def shutdown(self) -> None:
