@@ -31,15 +31,12 @@ class SettingsPogoauthHelper:
         return result.scalars().all()
 
     @staticmethod
-    async def get_assigned_to_device(session: AsyncSession, instance_id: int,
-                                     device_id: int,
-                                     type_of_login: Optional[LoginType] = None) -> List[SettingsPogoauth]:
-        stmt = select(SettingsPogoauth).where(and_(SettingsPogoauth.instance_id == instance_id,
-                                                   SettingsPogoauth.device_id == device_id))
-        if type_of_login:
-            stmt = stmt.where(SettingsPogoauth.login_type == type_of_login.value)
+    async def get_assigned_to_device(session: AsyncSession,
+                                     device_id: int) -> Optional[SettingsPogoauth]:
+        # Device ID is autoincrement unique, no need to check for instance ID
+        stmt = select(SettingsPogoauth).where(SettingsPogoauth.device_id == device_id)
         result = await session.execute(stmt)
-        return result.scalars().all()
+        return result.scalars().first()
 
     @staticmethod
     async def get(session: AsyncSession, instance_id: int, identifier: int) -> Optional[SettingsPogoauth]:

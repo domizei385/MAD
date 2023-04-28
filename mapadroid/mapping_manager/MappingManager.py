@@ -640,8 +640,7 @@ class MappingManager(AbstractMappingManager):
 
             # Fetch the logins that are assigned to this device...
             accounts_assigned: List[SettingsPogoauth] = await SettingsPogoauthHelper \
-                .get_assigned_to_device(session, self.__db_wrapper.get_instance_id(),
-                                        device_entry.device_settings.device_id)
+                .get_assigned_to_device(session, device_entry.device_settings.device_id)
             device_entry.ptc_logins.extend(accounts_assigned)
 
             if device.pool_id is not None:

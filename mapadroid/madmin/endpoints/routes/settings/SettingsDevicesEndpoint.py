@@ -46,8 +46,7 @@ class SettingsDevicesEndpoint(AbstractMadminRootEndpoint):
             if not device:
                 raise web.HTTPFound(self._url_for("settings_devices"))
             ptc_accounts_assigned = await SettingsPogoauthHelper \
-                .get_assigned_to_device(self._session, self._get_instance_id(), device.device_id,
-                                        LoginType.PTC)
+                .get_assigned_to_device(self._session, device.device_id)
 
         settings_vars: Optional[Dict] = self._get_settings_vars()
         ptc_accounts_assigned_or_not_assigned = await SettingsPogoauthHelper.get_avail_accounts(

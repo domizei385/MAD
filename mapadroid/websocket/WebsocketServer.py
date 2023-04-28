@@ -12,8 +12,9 @@ from mapadroid.data_handler.mitm_data.AbstractMitmMapper import \
 from mapadroid.data_handler.stats.AbstractStatsHandler import \
     AbstractStatsHandler
 from mapadroid.db.DbWrapper import DbWrapper
+from mapadroid.db.helper.SettingsPogoauthHelper import SettingsPogoauthHelper
 from mapadroid.db.helper.SettingsDeviceHelper import SettingsDeviceHelper
-from mapadroid.db.model import SettingsDevice
+from mapadroid.db.model import SettingsDevice, SettingsPogoauth
 from mapadroid.mapping_manager.MappingManager import MappingManager
 from mapadroid.mapping_manager.MappingManagerDevicemappingKey import \
     MappingManagerDevicemappingKey
@@ -173,6 +174,11 @@ class WebsocketServer(object):
                         await self.__handle_existing_connection(entry, origin)
                         entry.websocket_client_connection = websocket_client_connection
                     elif not entry:
+                        async with self.__db_wrapper as session, session:
+                            current_auth: Optional[SettingsPogoauth] = await SettingsPogoauthHelper\
+                                .get_assigned_to_device(session, device_id)
+                            if current_auth:
+                                session.expunge(current_auth)
                         # Just create a new entry...
                         worker_state: WorkerState = WorkerState(origin=origin,
                                                                 device_id=device_id,
