@@ -58,7 +58,6 @@ class MADmin(object):
         self._plugin_hotlink: list = []
         self.__init_app()
 
-    # @logger.catch()
     async def madmin_start(self) -> web.AppRunner:
         try:
             async with self._db_wrapper as session, session:
