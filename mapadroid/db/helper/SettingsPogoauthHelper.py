@@ -32,11 +32,11 @@ class SettingsPogoauthHelper:
 
     @staticmethod
     async def get_assigned_to_device(session: AsyncSession,
-                                     device_id: int) -> Optional[SettingsPogoauth]:
+                                     device_id: int) -> List[SettingsPogoauth]:
         # Device ID is autoincrement unique, no need to check for instance ID
         stmt = select(SettingsPogoauth).where(SettingsPogoauth.device_id == device_id)
         result = await session.execute(stmt)
-        return result.scalars().first()
+        return result.scalars().all()
 
     @staticmethod
     async def get(session: AsyncSession, instance_id: int, identifier: int) -> Optional[SettingsPogoauth]:

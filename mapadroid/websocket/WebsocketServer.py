@@ -172,10 +172,10 @@ class WebsocketServer(object):
                         entry.websocket_client_connection = websocket_client_connection
                     elif not entry:
                         async with self.__db_wrapper as session, session:
-                            current_auth: Optional[SettingsPogoauth] = await SettingsPogoauthHelper\
+                            current_auth: List[SettingsPogoauth] = await SettingsPogoauthHelper\
                                 .get_assigned_to_device(session, device_id)
-                            if current_auth:
-                                session.expunge(current_auth)
+                            if len(current_auth) > 0:
+                                session.expunge(current_auth[0])
                         # Just create a new entry...
                         worker_state: WorkerState = WorkerState(origin=origin,
                                                                 device_id=device_id,
