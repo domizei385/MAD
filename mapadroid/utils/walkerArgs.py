@@ -371,6 +371,9 @@ def parse_args():
                         help='Report queue size from mitmreciver to redis every every N seconds (Default: 30)')
 
     # PTC Login tracking
+    parser.add_argument('-ips', '--ip_service', default='https://ifconfig.me',
+                        help=('Host to use to request the external IPv4 address of the device. '
+                              'MAD will search for the first IPv4 address via regex.'))
     parser.add_argument('-elt', '--enable_login_tracking', action='store_true', default=False,
                         help=('Enable tracking of login attempts to PTC'))
     parser.add_argument('-lth', '--login_tracking_host', default='localhost',

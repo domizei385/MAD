@@ -1,6 +1,6 @@
 import asyncio
+import re
 from ipaddress import IPv4Address, ip_address
-from threading import Lock
 from typing import Optional
 
 import websockets
@@ -12,7 +12,7 @@ from mapadroid.utils.geo import get_distance_of_two_points_in_meters
 from mapadroid.utils.logging import LoggerEnums, get_logger
 from mapadroid.utils.madGlobals import (
     ScreenshotType, WebsocketWorkerConnectionClosedException,
-    WebsocketWorkerTimeoutException)
+    WebsocketWorkerTimeoutException, application_args)
 from mapadroid.websocket.AbstractCommunicator import AbstractCommunicator
 from mapadroid.websocket.WebsocketConnectedClientEntry import \
     WebsocketConnectedClientEntry
@@ -42,8 +42,14 @@ class Communicator(AbstractCommunicator):
         logger.info("Communicator calling exit to cleanup worker in websocket")
         try:
             await self.terminate_connection()
-        except (WebsocketWorkerConnectionClosedException, WebsocketWorkerTimeoutException):
+        except WebsocketWorkerConnectionClosedException:
             logger.info("Communicator-cleanup resulted in timeout or connection has already been closed")
+        except WebsocketWorkerTimeoutException:
+            logger.info("Timeout trying to close the connection gracefully. Force closing")
+            try:
+                await self.websocket_client_entry.websocket_client_connection.close()
+            except Exception as e:
+                logger.info("Failed closing connection forcefully: {}", e)
 
     async def __run_and_ok(self, command, timeout) -> bool:
         return await self.__run_and_ok_bytes(command, timeout)
@@ -107,34 +113,6 @@ class Communicator(AbstractCommunicator):
 
     async def turn_screen_on(self) -> bool:
         return await self.__run_and_ok("more screen on\r\n", self.__command_timeout)
-
-    async def get_external_ip(self) -> Optional[str]:
-        try:
-            res = await self.passthrough("echo \"$(curl -k -s https://ifconfig.me)\"")
-        except Exception as e:
-            logger.error(f"Failed getting external IP address from device: {e}")
-            return None
-
-        # parse RGC return expression
-        try:
-            res = " ".join(res.replace("[", "").replace("]", "").splitlines())
-        except Exception as e:
-            logger.error(f"Failed parsing external IP: {e}")
-            return None
-
-        if type(ip_address(res)) is IPv4Address:
-            return res
-        else:
-            logger.error(f"{res} is not a valid IPv4 address")
-            return None
-
-    async def get_ptc_status(self) -> int:
-        try:
-            code = await self.passthrough("curl -s -k -I https://sso.pokemon.com/sso/login -o /dev/null -w '%{http_code}'")
-            code = code.replace("[", "").replace("]", "")
-            return int(code)
-        except Exception:
-            return 500
 
     async def click(self, click_x: int, click_y: int) -> bool:
         logger.debug('Click {} / {}', click_x, click_y)
@@ -281,7 +259,7 @@ class Communicator(AbstractCommunicator):
 
     async def get_external_ip(self) -> Optional[str]:
         try:
-            res = await self.__run_get_gesponse(f"more http get ifconfig.me\r\n")
+            res = await self.__run_get_gesponse(f"more http get {application_args.ip_service}\r\n")
         except Exception as e:
             logger.error(f"Failed getting external IP address from device: {e}")
             return None
