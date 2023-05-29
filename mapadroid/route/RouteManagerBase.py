@@ -598,10 +598,10 @@ class RouteManagerBase(ABC):
             logger.debug("Checking routepool for idle/dead workers")
             for origin in list(self._routepool):
                 entry: RoutePoolEntry = self._routepool.get(origin)
-                if entry and time.time() - entry.last_access > timeout + entry.worker_sleeping:
+                if entry and time.time() > entry.last_access + timeout + entry.worker_sleeping:
                     logger.warning("Worker {} has not accessed a location in {} seconds, removing from "
                                    "routemanager. Sleeping value: {}, last access: {}", origin, timeout,
-                                       entry.last_access, entry.worker_sleeping)
+                                       entry.worker_sleeping, entry.last_access)
                     await self.unregister_worker(origin, True)
             await asyncio.sleep(60)
 
@@ -611,6 +611,7 @@ class RouteManagerBase(ABC):
         """
         if sleep_duration > 0 and origin in self._routepool:
             logger.info("Worker {} will sleep for {}s", origin, sleep_duration)
+            self._routepool[origin].last_access = time.time()
             self._routepool[origin].worker_sleeping = sleep_duration
 
     @abstractmethod
