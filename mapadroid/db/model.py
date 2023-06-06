@@ -1,4 +1,6 @@
 # coding: utf-8
+import enum
+
 from sqlalchemy import Column, Float, ForeignKey, Index, String, text
 from sqlalchemy.dialects.mysql import (BIGINT, BOOLEAN, ENUM, INTEGER,
                                        LONGBLOB, LONGTEXT, SMALLINT, TINYINT)
@@ -11,6 +13,11 @@ from mapadroid.db.TZDateTime import TZDateTime
 Base = declarative_base()
 metadata = Base.metadata
 
+
+class AuthLevel(enum.Enum):
+    MADMIN_PUBLIC_PAGE = 1
+    MITM_DATA = 2
+    MADMIN_ADMIN = 4
 
 class FilestoreMeta(Base):
     __tablename__ = 'filestore_meta'
@@ -788,7 +795,7 @@ class SettingsPogoauth(Base):
 
     instance_id = Column(ForeignKey('madmin_instance.instance_id', ondelete='CASCADE'), nullable=False, index=True)
     account_id = Column(INTEGER(10), primary_key=True, autoincrement=True)
-    device_id = Column(ForeignKey('settings_device.device_id', ondelete='CASCADE'), index=True)
+    device_id = Column(ForeignKey('settings_device.device_id', ondelete='CASCADE'), index=True, nullable=True)
     login_type = Column(ENUM('google', 'ptc'), nullable=False)
     username = Column(String(128, 'utf8mb4_unicode_ci'), nullable=False)
     password = Column(String(128, 'utf8mb4_unicode_ci'), nullable=False)

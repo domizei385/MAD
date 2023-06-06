@@ -9,6 +9,7 @@ from mapadroid.db.helper.SettingsDeviceHelper import SettingsDeviceHelper
 from mapadroid.db.model import (AutoconfigRegistration, SettingsDevice,
                                 SettingsPogoauth)
 from mapadroid.utils.logging import LoggerEnums, get_logger
+from mapadroid.utils.madGlobals import application_args
 
 logger = get_logger(LoggerEnums.database)
 
@@ -23,8 +24,11 @@ class SettingsPogoauthHelper:
     @staticmethod
     async def get_unassigned(session: AsyncSession, instance_id: int, auth_type: Optional[LoginType]) \
             -> List[SettingsPogoauth]:
-        stmt = select(SettingsPogoauth).where(and_(SettingsPogoauth.device_id == None,
-                                                   SettingsPogoauth.instance_id == instance_id))
+        if application_args.restrict_accounts_to_instance:
+            stmt = select(SettingsPogoauth).where(and_(SettingsPogoauth.device_id == None,
+                                                       SettingsPogoauth.instance_id == instance_id))
+        else:
+            stmt = select(SettingsPogoauth).where(SettingsPogoauth.device_id == None)
         if auth_type is not None:
             stmt = stmt.where(SettingsPogoauth.login_type == auth_type.value)
         result = await session.execute(stmt)
@@ -32,11 +36,11 @@ class SettingsPogoauthHelper:
 
     @staticmethod
     async def get_assigned_to_device(session: AsyncSession,
-                                     device_id: int) -> List[SettingsPogoauth]:
+                                     device_id: int) -> Optional[SettingsPogoauth]:
         # Device ID is autoincrement unique, no need to check for instance ID
         stmt = select(SettingsPogoauth).where(SettingsPogoauth.device_id == device_id)
         result = await session.execute(stmt)
-        return result.scalars().all()
+        return result.scalars().first()
 
     @staticmethod
     async def get(session: AsyncSession, instance_id: int, identifier: int) -> Optional[SettingsPogoauth]:
@@ -47,7 +51,10 @@ class SettingsPogoauthHelper:
 
     @staticmethod
     async def get_all(session: AsyncSession, instance_id: int) -> List[SettingsPogoauth]:
-        stmt = select(SettingsPogoauth).where(SettingsPogoauth.instance_id == instance_id)
+        stmt = select(SettingsPogoauth)
+        if application_args.restrict_accounts_to_instance:
+            stmt = stmt.where(SettingsPogoauth.instance_id == instance_id)
+
         result = await session.execute(stmt)
         return result.scalars().all()
 

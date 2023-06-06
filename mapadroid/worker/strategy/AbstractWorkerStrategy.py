@@ -249,10 +249,11 @@ class AbstractWorkerStrategy(ABC):
             logger.success("startPogo: Started pogo successfully...")
 
             await self._wait_pogo_start_delay()
+        start_delay: int = await self.get_devicesettings_value(MappingManagerDevicemappingKey.POST_POGO_START_DELAY, 60)
 
         await self._mapping_manager.routemanager_set_worker_sleeping(self._area_id,
                                                                      self._worker_state.origin,
-                                                                     sleep_time + 10)
+                                                                     max(sleep_time + 10, start_delay))
         return start_result
 
     async def set_devicesettings_value(self, key: MappingManagerDevicemappingKey, value: Optional[Any]):
@@ -310,8 +311,7 @@ class AbstractWorkerStrategy(ABC):
                 await self.stop_pogo()
                 await self._communicator.clear_app_cache("com.nianticlabs.pokemongo")
                 if await self.get_devicesettings_value(MappingManagerDevicemappingKey.CLEAR_GAME_DATA, False):
-                    logger.info('Clearing game data')
-                    await self._communicator.reset_app_data("com.nianticlabs.pokemongo")
+                    await self._clear_game_data()
                 self._worker_state.login_error_count = 0
                 await self._reboot()
                 break
@@ -384,6 +384,10 @@ class AbstractWorkerStrategy(ABC):
             self._worker_state.last_screen_type = screen_type
         return screen_type
 
+    async def _clear_game_data(self):
+        logger.info('Clearing game data')
+        await self._word_to_screen_matching.clear_game_data()
+
     async def _restart_pogo_safe(self):
         logger.info("WorkerBase::_restart_pogo_safe restarting pogo the long way")
         await self.stop_pogo()
@@ -406,7 +410,8 @@ class AbstractWorkerStrategy(ABC):
         logger.info('Switching User - please wait ...')
         await self.stop_pogo()
         await asyncio.sleep(5)
-        await self._communicator.reset_app_data("com.nianticlabs.pokemongo")
+        await self._clear_game_data()
+        await asyncio.sleep(5)
         await self.turn_screen_on_and_start_pogo()
         if not await self._ensure_pogo_topmost():
             logger.error('Kill Worker...')
@@ -486,6 +491,7 @@ class AbstractWorkerStrategy(ABC):
                 routemanager_settings = await self._mapping_manager.routemanager_get_settings(self._area_id)
                 worker_type: WorkerType = WorkerType(routemanager_settings.mode)
                 if not self._worker_state.current_location:
+                    logger.debug2("Setting location to 0, 0")
                     self._worker_state.current_location = Location(0, 0)
                 await self._stats_handler.stats_collect_location_data(self._worker_state.origin,
                                                                       self._worker_state.current_location, True, now_ts,
@@ -633,13 +639,11 @@ class AbstractWorkerStrategy(ABC):
         # self._resocalc.get_x_y_ratio(self, self._screen_x, self._screen_y, x_offset, y_offset)
 
     async def _grant_permissions_to_pogo(self) -> None:
-        if not await self.get_devicesettings_value(MappingManagerDevicemappingKey.EXTENDED_PERMISSION_TOGGLING, False):
-            return
-        command: str = "su -c 'magiskhide --add com.nianticlabs.pokemongo " \
-                       "&& pm grant com.nianticlabs.pokemongo android.permission.ACCESS_FINE_LOCATION " \
+        command: str = "su -c 'pm grant com.nianticlabs.pokemongo android.permission.ACCESS_FINE_LOCATION " \
                        "&& pm grant com.nianticlabs.pokemongo android.permission.ACCESS_COARSE_LOCATION " \
-                       "&&  pm grant com.nianticlabs.pokemongo android.permission.CAMERA " \
-                       "&& pm grant com.nianticlabs.pokemongo android.permission.GET_ACCOUNTS'"
+                       "&& pm grant com.nianticlabs.pokemongo android.permission.CAMERA " \
+                       "&& pm grant com.nianticlabs.pokemongo android.permission.GET_ACCOUNTS " \
+                       "&& magiskhide --add com.nianticlabs.pokemongo'"
         await self._communicator.passthrough(command)
 
     @abstractmethod

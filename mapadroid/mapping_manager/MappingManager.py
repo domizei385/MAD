@@ -114,7 +114,7 @@ class MappingManager(AbstractMappingManager):
         self._geofence_helpers: Optional[Dict[int, GeofenceHelper]] = None
         self._areas: Optional[Dict[int, AreaEntry]] = None
         self._routemanagers: Optional[Dict[int, RouteManagerBase]] = None
-        self._auths: Optional[Dict[str, str]] = None
+        self._auths: Optional[Dict[str, SettingsAuth]] = None
         self.__areamons: Optional[Dict[int, List[int]]] = {}
         self._monlists: Optional[Dict[int, List[int]]] = None
 
@@ -152,7 +152,7 @@ class MappingManager(AbstractMappingManager):
             self._redis_cache = await aioredis.Redis(**redis_credentials)
             await self._redis_cache.ping()
 
-    async def get_auths(self) -> Optional[Dict[str, str]]:
+    async def get_auths(self) -> Optional[Dict[str, SettingsAuth]]:
         return self._auths
 
     def set_device_state(self, device_id: int, active: int) -> None:
@@ -663,11 +663,6 @@ class MappingManager(AbstractMappingManager):
             device_entry: DeviceMappingsEntry = DeviceMappingsEntry()
             device_entry.device_settings = device
 
-            # Fetch the logins that are assigned to this device...
-            accounts_assigned: List[SettingsPogoauth] = await SettingsPogoauthHelper \
-                .get_assigned_to_device(session, device_entry.device_settings.device_id)
-            device_entry.ptc_logins.extend(accounts_assigned)
-
             if device.pool_id is not None:
                 device_entry.pool_settings = all_pools.get(device.pool_id, None)
 
@@ -680,7 +675,7 @@ class MappingManager(AbstractMappingManager):
             devices[device.name] = device_entry
         return devices
 
-    async def __get_latest_auths(self, session: AsyncSession) -> Dict[str, str]:
+    async def __get_latest_auths(self, session: AsyncSession) -> Dict[str, SettingsAuth]:
         """
         Reads current self.__raw_json mappings dict and checks if auth directive is present.
         :return: Dict of username : password
@@ -689,9 +684,9 @@ class MappingManager(AbstractMappingManager):
         if all_auths is None or len(all_auths) == 0:
             return {}
 
-        auths = {}
+        auths: Dict[str, SettingsAuth] = {}
         for auth in all_auths:
-            auths[auth.username] = auth.password
+            auths[auth.username] = auth
         return auths
 
     async def __get_latest_areas(self, session: AsyncSession) -> Dict[int, AreaEntry]:

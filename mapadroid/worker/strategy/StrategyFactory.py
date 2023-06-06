@@ -119,11 +119,10 @@ class StrategyFactory:
                            communicator: AbstractCommunicator,
                            walker_settings: Optional[SettingsWalkerarea],
                            worker_state: WorkerState) -> Optional[AbstractWorkerStrategy]:
+        worker_state.area_id = area_id
         strategy: Optional[AbstractWorkerStrategy] = None
         word_to_screen_matching: WordToScreenMatching = await WordToScreenMatching.create(communicator=communicator,
-                                                                                          pogo_win_manager=self.__pogo_windows,
-                                                                                          origin=worker_state.origin,
-                                                                                          resocalc=worker_state.resolution_calculator,
+                                                                                          worker_state=worker_state,
                                                                                           mapping_manager=self.__mapping_manager)
         if not worker_type or worker_type in [WorkerType.UNDEFINED, WorkerType.CONFIGMODE, WorkerType.IDLE]:
             logger.info("Either no valid worker type or idle was passed, creating idle strategy.")

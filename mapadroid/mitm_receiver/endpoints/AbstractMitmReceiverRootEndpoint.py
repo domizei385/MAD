@@ -17,16 +17,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mapadroid.data_handler.mitm_data.AbstractMitmMapper import AbstractMitmMapper
 from mapadroid.db.DbWrapper import DbWrapper
 from mapadroid.db.helper.AutoconfigRegistrationHelper import AutoconfigRegistrationHelper
-from mapadroid.db.model import Base, AutoconfigRegistration, AutoconfigLog
+from mapadroid.db.model import Base, AutoconfigRegistration, AutoconfigLog, SettingsAuth, AuthLevel
 from mapadroid.mad_apk.abstract_apk_storage import AbstractAPKStorage
 from mapadroid.mad_apk.utils import convert_to_backend
 from mapadroid.madmin import apiException
 from mapadroid.mapping_manager.MappingManager import MappingManager
 from mapadroid.updater.updater import DeviceUpdater
 from mapadroid.utils.apk_enums import APKArch, APKType, APKPackage
-from mapadroid.utils.authHelper import check_auth
+from mapadroid.utils.authHelper import check_auth, get_auths_for_levl
 from mapadroid.utils.json_encoder import MADEncoder
-
+from mapadroid.utils.madGlobals import application_args
 
 def validate_accepted(func) -> Any:
     @wraps(func)
@@ -76,7 +76,8 @@ class AbstractMitmReceiverRootEndpoint(web.View, ABC):
 
     async def _process_request(self):
         with logger.contextualize(identifier=self._get_request_address(), name="mitm-receiver-endpoint"):
-            await self._check_mitm_device_auth()
+            if not application_args.insecure_auth:
+                await self._check_mitm_device_auth()
 
             db_wrapper: DbWrapper = self._get_db_wrapper()
             async with db_wrapper as session, session:
@@ -300,9 +301,9 @@ class AbstractMitmReceiverRootEndpoint(web.View, ABC):
         Returns:
 
         """
-        auth = self._request.headers.get('Authorization')
-        auths_allowed: Optional[Dict[str, str]] = await self._get_mapping_manager().get_auths()
-        if not check_auth(logger, auth, self._get_mad_args(), auths_allowed):
+        auth: Optional[str] = self._request.headers.get('Authorization')
+        auths_allowed: Dict[str, SettingsAuth] = await get_auths_for_levl(self._get_db_wrapper(), AuthLevel.MITM_DATA)
+        if not check_auth(logger, auth, auths_allowed):
             logger.warning("Unauthorized attempt to connect from {}", self._get_request_address())
             raise web.HTTPUnauthorized()
 

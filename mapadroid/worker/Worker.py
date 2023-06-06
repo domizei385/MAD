@@ -318,8 +318,7 @@ class Worker(AbstractWorker):
                 logger.error("No Value for Mode - check your settings! Killing worker")
                 return False
             processed_rounds = await self._mapping_manager.routemanager_get_rounds(
-                self._scan_strategy.area_id,
-                self._worker_state.origin)
+                self._scan_strategy.area_id)
             if int(processed_rounds) >= int(rounds):
                 return False
             return True
