@@ -49,7 +49,8 @@ class RouteManagerLeveling(RouteManagerBase):
 
             any_at_all = False
             async with self.db_wrapper as session, session:
-                for origin in routepool.keys():
+                keys = list(routepool.keys())
+                for origin in keys:
                     origin_local_list = []
                     entry: Optional[RoutePoolEntry] = routepool.get(origin)
                     if not entry:
