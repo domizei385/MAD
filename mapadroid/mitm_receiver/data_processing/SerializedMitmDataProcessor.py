@@ -183,7 +183,30 @@ class SerializedMitmDataProcessor:
             end_time = self.get_time_ms() - start_time
             logger.debug("Done processing encounter in {}ms", end_time)
         else:
-            logger.warning("Playerlevel lower than 30 - not processing encounter IVs")
+            logger.warning("Playerlevel lower than 30 - Tracking encounters but no iv data")
+            if application_args.game_stats:
+                encounter_proto = data["payload"]
+                wild_pokemon = encounter_proto.get("wild_pokemon", None)
+                if wild_pokemon is None or wild_pokemon.get("encounter_id", 0) == 0 or not str(wild_pokemon["spawnpoint_id"]):
+                    return None
+
+                encounter_id = wild_pokemon["encounter_id"]
+                pokemon_data = wild_pokemon.get("pokemon_data")
+                mon_id = pokemon_data.get("id")
+                pokemon_display = pokemon_data.get("display", {})
+                weather_boosted = pokemon_display.get('weather_boosted_value', None)
+                if encounter_id < 0:
+                    encounter_id = encounter_id + 2 ** 64
+                cache: Redis = await self.__db_wrapper.get_cache()
+                cache_key = "monlvl{}-{}-{}".format(encounter_id, weather_boosted, mon_id)
+                if await cache.exists(cache_key):
+                    return
+                shiny = wild_pokemon["pokemon_data"]["display"].get("is_shiny", 0)
+                is_shiny: bool = True if shiny == 1 else False
+
+                # encounter_id, is_shiny = encounter
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.__stats_mon_iv(origin, encounter_id, received_date, is_shiny))
 
     async def __stats_mon_iv(self, origin: str, encounter_id: int, received_date: datetime, is_shiny: bool):
         await self.__stats_handler.stats_collect_mon_iv(origin, encounter_id, received_date, is_shiny)
