@@ -585,6 +585,7 @@ class WordToScreenMatching(object):
         return ScreenType.NOTRESPONDING
 
     async def __handle_character_selection_screen(self) -> ScreenType:
+        #self._nextscreen = ScreenType.WILLOWCATCH
         for _ in range(9):
             await self._communicator.click(100, 100)
             await asyncio.sleep(1)
@@ -613,6 +614,7 @@ class WordToScreenMatching(object):
         return ScreenType.NOTRESPONDING
 
     async def __handle_catch_tutorial(self) -> ScreenType:
+        #self._nextscreen = ScreenType.WILLOWNAME
         for _ in range(2):
             await self._communicator.click(100, 100)
         for x in range(1,10):
@@ -662,6 +664,7 @@ class WordToScreenMatching(object):
         return ScreenType.NOTRESPONDING
 
     async def __handle_name_screen(self) -> ScreenType:
+        #self._nextscreen = ScreenType.ADVENTURESYNC
         for _ in range(2):
             await self._communicator.click(100, 100)
             await asyncio.sleep(1)
@@ -698,7 +701,7 @@ class WordToScreenMatching(object):
         await asyncio.sleep(5)
         return ScreenType.ADVENTURESYNC
 
-    async def __handle_adventure_sync_screen(self, screentype: ScreenType) -> ScreenType:
+    async def __handle_adventure_sync_screen(self, screentype) -> ScreenType:
         if not await self.parse_adventure_sync(await self._communicator.uiautomator()):
             screentype = ScreenType.ERROR
         await asyncio.sleep(5)

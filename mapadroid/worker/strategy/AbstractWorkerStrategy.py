@@ -210,6 +210,7 @@ class AbstractWorkerStrategy(ABC):
             await asyncio.sleep(
                 await self.get_devicesettings_value(MappingManagerDevicemappingKey.POST_TURN_SCREEN_ON_DELAY, 7))
 
+        sleep_time = 0
         if self._worker_state.active_account:
             logger.info(f"logintype is {self._worker_state.active_account.login_type}")
         else:
@@ -218,23 +219,21 @@ class AbstractWorkerStrategy(ABC):
         if self._worker_state.active_account and self._worker_state.active_account.login_type == LoginType.ptc.name\
                 and MadGlobals.application_args.enable_login_tracking:
             logger.debug("start_pogo: Login tracking enabled")
-            if not await self._word_to_screen_matching.check_ptc_login_ban(increment_count=False):
-                # TODO: Why should we always reset app data here?
+            c=0
+            while not await self._word_to_screen_matching.check_ptc_login_ban() and c < 5:
                 # sleeping close to or longer than 5 minutes may cause a problem with a 5-minute timeout
                 # in the RGC websocket connection? Only sleep 60s and then do some nonsense ...
-                logger.warning("start_pogo: No permission for PTC login. Kill pogo data and wait for 4 minutes...")
-                await self._communicator.reset_app_data("com.nianticlabs.pokemongo")
-                await self._communicator.stop_app("com.nianticlabs.pokemongo")
-                c = 0
+                logger.warning(f"start_pogo: No permission for PTC login. Sleep for 1 minute... c = {c}")
+                c+=1
+                sleep_time+=60
+                await self._mapping_manager.routemanager_set_worker_sleeping(self._area_id,
+                                                                             self._worker_state.origin,
+                                                                             sleep_time)
+                await asyncio.sleep(60)
                 await self._communicator.passthrough("true")
-                while c < 4:
-                    logger.warning(f"start_pogo: sleep 60 more seconds ... c = {c}")
-                    c += 1
-                    await asyncio.sleep(60)
-                    await self._communicator.passthrough("true")
-                logger.warning("start_pogo: reboot after waiting ...")
-                await self._reboot()
-                return False
+                if c > 4:
+                    logger.warning("Stopping Worker task as no PTC login slot was available")
+                    raise InternalStopWorkerException("Failed to retrieve PTC login slot")
             logger.success("start_pogo: Received permission for (potential) PTC login")
 
         await self._grant_permissions_to_pogo()
@@ -257,7 +256,7 @@ class AbstractWorkerStrategy(ABC):
             else:
                 await self._mapping_manager.login_tracking_set_ip(self._worker_state.origin, ip_of_device)
 
-        await self._wait_pogo_start_delay()
+            await self._wait_pogo_start_delay()
         start_delay: int = await self.get_devicesettings_value(
             MappingManagerDevicemappingKey.POST_POGO_START_DELAY, 60)
         await self._mapping_manager.routemanager_set_worker_sleeping(self._area_id,
