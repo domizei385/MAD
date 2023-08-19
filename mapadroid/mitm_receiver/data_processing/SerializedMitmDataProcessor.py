@@ -184,7 +184,7 @@ class SerializedMitmDataProcessor:
             logger.debug("Done processing encounter in {}ms", end_time)
         else:
             logger.warning("Playerlevel lower than 30 - Tracking encounters but no iv data")
-            if application_args.game_stats:
+            if MadGlobals.application_args.game_stats:
                 encounter_proto = data["payload"]
                 wild_pokemon = encounter_proto.get("wild_pokemon", None)
                 if wild_pokemon is None or wild_pokemon.get("encounter_id", 0) == 0 or not str(wild_pokemon["spawnpoint_id"]):
