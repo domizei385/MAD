@@ -23,3 +23,4 @@ apkutils==0.8.3
 greenlet<0.4.17
 apkmirror-search
 cachetools
+werkzeug>=3.1.4 # not directly required, pinned by Snyk to avoid a vulnerability
